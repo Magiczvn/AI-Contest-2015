@@ -544,6 +544,68 @@ function Board(board, myPosition, enemyPosition){
 		
 	};
 	
+	var negaMax = function name(depth, alpha, beta) {
+		var bestScore = -WINNING_SCORE;
+		var score;
+		
+		if(depth == 0){
+			return self.evalBoard();
+		}
+		
+		var possibleMoves = self.findAllPossibleMoves();
+		
+		for(var i = 0; i < possibleMoves.length; i++){
+			self.makeMove(possibleMoves[i]);
+			
+			if (self.evalBoard() <= -WINNING_SCORE){
+				self.undoMove(possibleMoves[i]);
+				return WINNING_SCORE + depth;
+			}			
+			
+			score = -negaMax(depth - 1, -beta, -alpha);
+			self.undoMove(possibleMoves[i]);
+			
+			if(score >= beta)
+				return score;
+			if(score > alpha){
+				alpha = score;
+				bestScore = score;
+			}
+				
+		}
+		return bestScore;
+	};
+	
+	this.findBestMove = function () {
+		var depth = 10;
+		var alpha =-WINNING_SCORE;
+		var beta = WINNING_SCORE;
+		
+		var possibleMoves = self.findAllPossibleMoves();
+		var bestScore = -WINNING_SCORE;
+		var bestMove;
+		var move, score;
+		
+		for (var i = 0; i < possibleMoves.length; i++) {
+			move = possibleMoves[i];
+			
+			self.makeMove(move);
+			
+			score = -negaMax(depth - 1, -beta, -alpha);			
+			if(score > bestScore){
+				bestScore = score;
+				bestMove = move;
+			}
+			
+			self.undoMove(move);
+		}
+		
+		if (bestMove == null){
+			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
+		}
+		return bestMove;
+	}
+	
 }
 
 
@@ -551,7 +613,7 @@ function MyTurn() {
 	// This is my testing algorithm, which will pick a random valid move, then move.
 	// This array contain which move can I make.	
 	var myBoard = new  Board(board, myPosition, enemyPosition);
-	var suitableDir = myBoard.findAllPossibleMoves();
+	//var suitableDir = myBoard.findAllPossibleMoves();
 
 	/*// Choose one of the suitable direction
 	var selection = (Math.random() * suitableDir.length) >> 0;
@@ -562,7 +624,7 @@ function MyTurn() {
 	console.log(myBoard.evalBoard());
 	*/
 	
-	var bestMove;
+	/*var bestMove;
 	var bestScore = -WINNING_SCORE;
 	var dir;
 	for (var i = 0; i < suitableDir.length; i++){
@@ -577,8 +639,10 @@ function MyTurn() {
 	}
 	
 	console.log(bestScore);
-	
+	*/
+	var bestMove = myBoard.findBestMove();
 	
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
 	Command(bestMove);
 }
+

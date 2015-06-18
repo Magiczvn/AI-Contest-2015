@@ -18,7 +18,7 @@ IF EXIST P2.exe (
 	start "Bot C++" cmd /c call P2.exe -h 127.0.0.1 -p 3011 -k 11
 )
 ELSE IF EXIST P2.js (
-	start node P2.js -h 127.0.0.1 -p 3011 -k 11
+	node P2.js -h 127.0.0.1 -p 3011 -k 11
 )
 
 pause
