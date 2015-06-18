@@ -412,6 +412,7 @@ function Board(board, myPosition, enemyPosition){
 		x-=	direction_command.x;
 		y-= direction_command.y;	
 		
+		self.board[x][y] = BLOCK_EMPTY;
 		if(!self.isValidPosition(x, y))
 		{
 			console.log("How could it be! Undo move fail!");
@@ -552,16 +553,33 @@ function MyTurn() {
 	var myBoard = new  Board(board, myPosition, enemyPosition);
 	var suitableDir = myBoard.findAllPossibleMoves();
 
-	// Choose one of the suitable direction
+	/*// Choose one of the suitable direction
 	var selection = (Math.random() * suitableDir.length) >> 0;
 	var dir = suitableDir[selection];	
 	
 	//myBoard.makeMove(dir);
 	
 	console.log(myBoard.evalBoard());
+	*/
 	
+	var bestMove;
+	var bestScore = -WINNING_SCORE;
+	var dir;
+	for (var i = 0; i < suitableDir.length; i++){
+		dir = suitableDir[i];
+		myBoard.makeMove(dir);
+		var score = -myBoard.evalBoard();
+		if(score > bestScore){
+			bestMove = dir;
+			bestScore = score;
+		}
+		myBoard.undoMove(dir);
+	}
+	
+	console.log(bestScore);
 	
 	
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
-	Command(dir);
+	Command(bestMove);
 }
+
