@@ -267,10 +267,21 @@ var directions = [DIRECTION_LEFT, DIRECTION_RIGHT, DIRECTION_UP, DIRECTION_DOWN]
 
 var direction_commands = {};
 
-direction_commands[DIRECTION_LEFT] 	= 	{x : -1, y :  0},
-direction_commands[DIRECTION_RIGHT] = 	{x :  1, y :  0},
-direction_commands[DIRECTION_UP] 	=	{x :  0, y : -1},
-direction_commands[DIRECTION_DOWN] 	= 	{x :  0, y :  1}
+direction_commands[DIRECTION_LEFT] 	= 	{x : -1, y :  0};
+direction_commands[DIRECTION_RIGHT] = 	{x :  1, y :  0};
+direction_commands[DIRECTION_UP] 	=	{x :  0, y : -1};
+direction_commands[DIRECTION_DOWN] 	= 	{x :  0, y :  1};
+
+var MYBLOCK_OBSTACLE = 100;
+
+/*Use temp board to avoid create new board */
+var tempBoard = [];
+for(var i = 0; i < MAP_SIZE; i++){
+	tempBoard[i] = [];
+	for(var j = 0; j < MAP_SIZE; j++){
+		tempBoard[i].push(BLOCK_EMPTY);
+	}
+}
 
 function Board(board, myPosition, enemyPosition){
 	this.width = MAP_SIZE;
@@ -340,7 +351,7 @@ function Board(board, myPosition, enemyPosition){
 	this.createBoard();
 	this.copyBoard(board);
 	
-	this.isValidPosition = function(x, y){
+	this.isValidPosition = function(x, y){		
 		return (x >= 0) && (x < self.width) && (y >= 0) && (y < self.height) && (self.board[x][y] == BLOCK_EMPTY);
 	};
 	
@@ -382,6 +393,34 @@ function Board(board, myPosition, enemyPosition){
 		return true;		
 	};
 	
+	this.undoMove = function(direction){
+		var direction_command = direction_commands[direction];
+		
+		self.playerInTurn = -self.playerInTurn;
+		
+		var position = self.positions[self.playerInTurn];
+		
+		var x = position.x; 
+		var y = position.y;
+		
+		self.board[x][y] = BLOCK_EMPTY;
+		
+		x-=	direction_command.x;
+		y-= direction_command.y;	
+		
+		if(!self.isValidPosition(x, y))
+		{
+			console.log("How could it be! Undo move fail!");
+			return false;
+		}
+		position.x = x;
+		position.y = y;
+		
+		self.board[x][y] = self.playerInTurn;		
+		
+		return true;		
+	};
+	
 	this.findAllPossibleMoves = function(){
 		var possibleMoves = [];
 		for( var i = 0; i < directions.length; i++){
@@ -391,6 +430,93 @@ function Board(board, myPosition, enemyPosition){
 		return possibleMoves;
 	};
 	
+	this.evalBoard = function () {
+		var board = self.board;
+		
+		//Fill temp board with values
+		for(var i = 0; i < self.height; i++){			
+			for(var j = 0; j < self.width; j++){
+				tempBoard[i][j] = (board[i][j] == BLOCK_EMPTY?BLOCK_EMPTY:MYBLOCK_OBSTACLE);
+			}
+		}
+		
+		var currentPlayer = self.playerInTurn;
+		var enemyPlayer = -currentPlayer;
+		
+		var currentPlayerPosition = self.positions[currentPlayer];
+		var enemyPlayerPosition = self.positions[enemyPlayer];
+		
+		var myCells = 0;
+		var enemyCells = 0;
+		
+		tempBoard[currentPlayerPosition.x][currentPlayerPosition.y] = BLOCK_EMPTY;
+		tempBoard[enemyPlayerPosition.x][enemyPlayerPosition.y] = BLOCK_EMPTY;
+		
+		var queue = [];
+		queue.push({
+			x: currentPlayerPosition.x,
+			y: currentPlayerPosition.y,
+			player: currentPlayer,
+			stepvalue: currentPlayer
+		});
+		
+		queue.push({
+			x: enemyPlayerPosition.x,
+			y: enemyPlayerPosition.y,
+			player: enemyPlayer,
+			stepvalue: enemyPlayer
+		});
+		
+		var position;		
+		var x, y, x_new, y_new;
+		var blockValue, newStepValue;
+		var direction_command;
+		while(queue.length > 0){
+			position = queue.shift();
+			
+			x = position.x;
+			y = position.y;
+			
+			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
+				continue;
+			
+			tempBoard[x][y] = position.stepvalue;
+			
+			newStepValue = position.stepvalue + position.player;
+						
+			
+			for( var i = 0; i < directions.length; i++){
+				direction_command = direction_commands[directions[i]];			
+				
+				x_new = x + direction_command.x;
+				y_new = y + direction_command.y;
+				
+				
+				
+				if((x_new >= 0) && (x_new < self.width) && (y_new >= 0) && (y_new < self.height) && (tempBoard[x_new][y_new] != MYBLOCK_OBSTACLE)){
+					/*There are two case we must check:
+					 1. blockValue = BLOCK_EMPTY => add to the queue
+					 2. blockValue = -(position.stepvalue + position.player) => assign tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE
+					*/
+					blockValue = tempBoard[x_new][y_new];
+					if(blockValue == BLOCK_EMPTY){
+						queue.push({
+							x: x_new,
+							y: y_new,
+							player: position.player,
+							stepvalue: newStepValue
+						});
+					}
+					else if(blockValue == -newStepValue){
+						tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE;
+					}
+					
+				}		
+			}
+			
+		}
+		
+	}
 	
 }
 
