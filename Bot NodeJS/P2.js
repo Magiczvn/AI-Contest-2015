@@ -272,6 +272,17 @@ direction_commands[DIRECTION_RIGHT] = 	{x :  1, y :  0},
 direction_commands[DIRECTION_UP] 	=	{x :  0, y : -1},
 direction_commands[DIRECTION_DOWN] 	= 	{x :  0, y :  1}
 
+/*Create temp board for eval function*/
+var tempBoard = [];
+for(var i = 0; i < MAP_SIZE; i++){
+	tempBoard[i] = [];
+	for(var j = 0; j < MAP_SIZE; j++){
+		tempBoard[i].push(BLOCK_EMPTY);
+	}
+}
+
+var MYBLOCK_OBSTACLE = 100;
+
 function Board(board, myPosition, enemyPosition){
 	this.width = MAP_SIZE;
 	this.height = MAP_SIZE;
@@ -382,6 +393,34 @@ function Board(board, myPosition, enemyPosition){
 		return true;		
 	};
 	
+	this.undoMove = function(direction){
+		var direction_command = direction_commands[direction];
+		self.playerInTurn = -self.playerInTurn;
+		
+		var position = self.positions[self.playerInTurn];
+		
+		var x = position.x;
+		var y = position.y;
+		
+		self.board[x][y] = BLOCK_EMPTY;
+		
+		x -= direction_command.x;
+		y -= direction_command.y;		
+		
+		if(!self.isValidPosition(x, y))
+		{
+			console.log("How could it be, undoMove");
+			return false;
+		}
+		
+		position.x = x;
+		position.y = y;
+		
+		self.board[x][y] = self.playerInTurn;		
+		
+		return true;		
+	};
+	
 	this.findAllPossibleMoves = function(){
 		var possibleMoves = [];
 		for( var i = 0; i < directions.length; i++){
@@ -390,6 +429,32 @@ function Board(board, myPosition, enemyPosition){
 		}
 		return possibleMoves;
 	};
+	
+	this.evalBoard = function(){
+		/*Fill value to temp board*/
+		var board = self.board;		
+		for(var i = 0; i < self.height; i++){			
+			for(var j = 0; j < self.width; j++){
+				tempBoard[i][j] = (board[i][j] == BLOCK_EMPTY?0:MYBLOCK_OBSTACLE);					
+			}
+		}
+		
+		var currentPlayer = self.playerInTurn;
+		var enemyPlayer = -currentPlayer;
+
+		var currentPlayerPosition = self.positions[currentPlayer];	
+		var enemyPlayerPosition = self.positions[enemyPlayer];
+		
+		tempBoard[currentPlayerPosition.x][currentPlayerPosition.y] = 1;
+		tempBoard[enemyPlayerPosition.x][enemyPlayerPosition.y] = -1;
+		
+		queue.push({
+			x : currentPlayerPosition.x,
+			y : currentPlayerPosition.y
+		});
+		
+		
+	}
 	
 	
 }
