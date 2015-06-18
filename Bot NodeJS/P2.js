@@ -273,6 +273,10 @@ direction_commands[DIRECTION_UP] 	=	{x :  0, y : -1};
 direction_commands[DIRECTION_DOWN] 	= 	{x :  0, y :  1};
 
 var MYBLOCK_OBSTACLE = 100;
+var WINNING_SCORE = 10000000;
+var BLOCKOWNED_SCORE = 1000;
+
+var scoreMultiplier = [0, 0.5, 1.5, 1]; 
 
 /*Use temp board to avoid create new board */
 var tempBoard = [];
@@ -356,10 +360,10 @@ function Board(board, myPosition, enemyPosition){
 	};
 	
 	/*Check valid move, no move will be made*/
-	this.isValidMove = function(direction){
+	this.isValidMove = function(direction, position){
 		var direction_command = direction_commands[direction];
 		
-		var position = self.positions[self.playerInTurn];
+		position = position || self.positions[self.playerInTurn];		
 		
 		var x = position.x + direction_command.x;
 		var y = position.y + direction_command.y;		
@@ -421,10 +425,11 @@ function Board(board, myPosition, enemyPosition){
 		return true;		
 	};
 	
-	this.findAllPossibleMoves = function(){
+	//if position is passed as params it will find validMove from this position, otherwise find all valid move from currentplayer position
+	this.findAllPossibleMoves = function(position){
 		var possibleMoves = [];
 		for( var i = 0; i < directions.length; i++){
-			if (self.isValidMove(directions[i]))
+			if (self.isValidMove(directions[i], position))
 				possibleMoves.push(directions[i]);			
 		}
 		return possibleMoves;
@@ -446,11 +451,20 @@ function Board(board, myPosition, enemyPosition){
 		var currentPlayerPosition = self.positions[currentPlayer];
 		var enemyPlayerPosition = self.positions[enemyPlayer];
 		
-		var myCells = 0;
-		var enemyCells = 0;
+		var currentPlayerPossibleMoves = self.findAllPossibleMoves(currentPlayerPosition);
+		var enemyPlayerPossibleMoves =  self.findAllPossibleMoves(enemyPlayerPosition);
 		
-		tempBoard[currentPlayerPosition.x][currentPlayerPosition.y] = BLOCK_EMPTY;
-		tempBoard[enemyPlayerPosition.x][enemyPlayerPosition.y] = BLOCK_EMPTY;
+		if (currentPlayerPossibleMoves.length == 0)
+			return -WINNING_SCORE;
+		else if(enemyPlayerPossibleMoves.length == 0)
+			return WINNING_SCORE;
+		
+		var cells_count = {};
+		cells_count[currentPlayer] = -1;
+		cells_count[enemyPlayer] = -1;
+		
+		tempBoard[currentPlayerPosition.x][currentPlayerPosition.y] = currentPlayer;
+		tempBoard[enemyPlayerPosition.x][enemyPlayerPosition.y] = enemyPlayer;
 		
 		var queue = [];
 		queue.push({
@@ -480,7 +494,7 @@ function Board(board, myPosition, enemyPosition){
 			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
 				continue;
 			
-			tempBoard[x][y] = position.stepvalue;
+			cells_count[position.player]++;
 			
 			newStepValue = position.stepvalue + position.player;
 						
@@ -506,17 +520,28 @@ function Board(board, myPosition, enemyPosition){
 							player: position.player,
 							stepvalue: newStepValue
 						});
+						tempBoard[x_new][y_new] = newStepValue;
 					}
 					else if(blockValue == -newStepValue){
-						tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE;
+						tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE;						
 					}
 					
 				}		
 			}
 			
-		}
+		}//End while
 		
-	}
+		//Now we have number of cells each player can own		
+		var score = 0;		
+		
+		score += cells_count[currentPlayer]*scoreMultiplier[currentPlayerPossibleMoves.length];
+		score -= cells_count[enemyPlayer]*scoreMultiplier[enemyPlayerPossibleMoves.length];
+		
+		score *= BLOCKOWNED_SCORE;
+		
+		return score;
+		
+	};
 	
 }
 
@@ -532,7 +557,10 @@ function MyTurn() {
 	var dir = suitableDir[selection];	
 	
 	//myBoard.makeMove(dir);
-	console.log(dir);	
+	
+	console.log(myBoard.evalBoard());
+	
+	
 	
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
 	Command(dir);
