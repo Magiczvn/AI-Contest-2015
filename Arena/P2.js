@@ -267,10 +267,25 @@ var directions = [DIRECTION_LEFT, DIRECTION_RIGHT, DIRECTION_UP, DIRECTION_DOWN]
 
 var direction_commands = {};
 
-direction_commands[DIRECTION_LEFT] 	= 	{x : -1, y :  0},
-direction_commands[DIRECTION_RIGHT] = 	{x :  1, y :  0},
-direction_commands[DIRECTION_UP] 	=	{x :  0, y : -1},
-direction_commands[DIRECTION_DOWN] 	= 	{x :  0, y :  1}
+direction_commands[DIRECTION_LEFT] 	= 	{x : -1, y :  0};
+direction_commands[DIRECTION_RIGHT] = 	{x :  1, y :  0};
+direction_commands[DIRECTION_UP] 	=	{x :  0, y : -1};
+direction_commands[DIRECTION_DOWN] 	= 	{x :  0, y :  1};
+
+var MYBLOCK_OBSTACLE = 100;
+var WINNING_SCORE = 10000000;
+var BLOCKOWNED_SCORE = 1000;
+
+var scoreMultiplier = [0, 0.5, 1.5, 1]; 
+
+/*Use temp board to avoid create new board */
+var tempBoard = [];
+for(var i = 0; i < MAP_SIZE; i++){
+	tempBoard[i] = [];
+	for(var j = 0; j < MAP_SIZE; j++){
+		tempBoard[i].push(BLOCK_EMPTY);
+	}
+}
 
 function Board(board, myPosition, enemyPosition){
 	this.width = MAP_SIZE;
@@ -340,15 +355,15 @@ function Board(board, myPosition, enemyPosition){
 	this.createBoard();
 	this.copyBoard(board);
 	
-	this.isValidPosition = function(x, y){
+	this.isValidPosition = function(x, y){		
 		return (x >= 0) && (x < self.width) && (y >= 0) && (y < self.height) && (self.board[x][y] == BLOCK_EMPTY);
 	};
 	
 	/*Check valid move, no move will be made*/
-	this.isValidMove = function(direction){
+	this.isValidMove = function(direction, position){
 		var direction_command = direction_commands[direction];
 		
-		var position = self.positions[self.playerInTurn];
+		position = position || self.positions[self.playerInTurn];		
 		
 		var x = position.x + direction_command.x;
 		var y = position.y + direction_command.y;		
@@ -382,15 +397,214 @@ function Board(board, myPosition, enemyPosition){
 		return true;		
 	};
 	
-	this.findAllPossibleMoves = function(){
+	this.undoMove = function(direction){
+		var direction_command = direction_commands[direction];
+		
+		self.playerInTurn = -self.playerInTurn;
+		
+		var position = self.positions[self.playerInTurn];
+		
+		var x = position.x; 
+		var y = position.y;
+		
+		self.board[x][y] = BLOCK_EMPTY;
+		
+		x-=	direction_command.x;
+		y-= direction_command.y;	
+		
+		self.board[x][y] = BLOCK_EMPTY;
+		if(!self.isValidPosition(x, y))
+		{
+			console.log("How could it be! Undo move fail!");
+			return false;
+		}
+		position.x = x;
+		position.y = y;
+		
+		self.board[x][y] = self.playerInTurn;		
+		
+		return true;		
+	};
+	
+	//if position is passed as params it will find validMove from this position, otherwise find all valid move from currentplayer position
+	this.findAllPossibleMoves = function(position){
 		var possibleMoves = [];
 		for( var i = 0; i < directions.length; i++){
-			if (self.isValidMove(directions[i]))
+			if (self.isValidMove(directions[i], position))
 				possibleMoves.push(directions[i]);			
 		}
 		return possibleMoves;
 	};
 	
+	this.evalBoard = function () {
+		var board = self.board;
+		
+		//Fill temp board with values
+		for(var i = 0; i < self.height; i++){			
+			for(var j = 0; j < self.width; j++){
+				tempBoard[i][j] = (board[i][j] == BLOCK_EMPTY?BLOCK_EMPTY:MYBLOCK_OBSTACLE);
+			}
+		}
+		
+		var currentPlayer = self.playerInTurn;
+		var enemyPlayer = -currentPlayer;
+		
+		var currentPlayerPosition = self.positions[currentPlayer];
+		var enemyPlayerPosition = self.positions[enemyPlayer];
+		
+		var currentPlayerPossibleMoves = self.findAllPossibleMoves(currentPlayerPosition);
+		var enemyPlayerPossibleMoves =  self.findAllPossibleMoves(enemyPlayerPosition);
+		
+		if (currentPlayerPossibleMoves.length == 0)
+			return -WINNING_SCORE;
+		else if(enemyPlayerPossibleMoves.length == 0)
+			return WINNING_SCORE;
+		
+		var cells_count = {};
+		cells_count[currentPlayer] = -1;
+		cells_count[enemyPlayer] = -1;
+		
+		tempBoard[currentPlayerPosition.x][currentPlayerPosition.y] = currentPlayer;
+		tempBoard[enemyPlayerPosition.x][enemyPlayerPosition.y] = enemyPlayer;
+		
+		var queue = [];
+		queue.push({
+			x: currentPlayerPosition.x,
+			y: currentPlayerPosition.y,
+			player: currentPlayer,
+			stepvalue: currentPlayer
+		});
+		
+		queue.push({
+			x: enemyPlayerPosition.x,
+			y: enemyPlayerPosition.y,
+			player: enemyPlayer,
+			stepvalue: enemyPlayer
+		});
+		
+		var position;		
+		var x, y, x_new, y_new;
+		var blockValue, newStepValue;
+		var direction_command;
+		while(queue.length > 0){
+			position = queue.shift();
+			
+			x = position.x;
+			y = position.y;
+			
+			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
+				continue;
+			
+			cells_count[position.player]++;
+			
+			newStepValue = position.stepvalue + position.player;
+						
+			
+			for( var i = 0; i < directions.length; i++){
+				direction_command = direction_commands[directions[i]];			
+				
+				x_new = x + direction_command.x;
+				y_new = y + direction_command.y;
+				
+				
+				
+				if((x_new >= 0) && (x_new < self.width) && (y_new >= 0) && (y_new < self.height) && (tempBoard[x_new][y_new] != MYBLOCK_OBSTACLE)){
+					/*There are two case we must check:
+					 1. blockValue = BLOCK_EMPTY => add to the queue
+					 2. blockValue = -(position.stepvalue + position.player) => assign tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE
+					*/
+					blockValue = tempBoard[x_new][y_new];
+					if(blockValue == BLOCK_EMPTY){
+						queue.push({
+							x: x_new,
+							y: y_new,
+							player: position.player,
+							stepvalue: newStepValue
+						});
+						tempBoard[x_new][y_new] = newStepValue;
+					}
+					else if(blockValue == -newStepValue){
+						tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE;						
+					}
+					
+				}		
+			}
+			
+		}//End while
+		
+		//Now we have number of cells each player can own		
+		var score = 0;		
+		
+		score += cells_count[currentPlayer]*scoreMultiplier[currentPlayerPossibleMoves.length];
+		score -= cells_count[enemyPlayer]*scoreMultiplier[enemyPlayerPossibleMoves.length];
+		
+		score *= BLOCKOWNED_SCORE;
+		
+		return score;
+		
+	};
+	
+	var negaMax = function name(depth, alpha, beta) {
+		var bestScore = -WINNING_SCORE;
+		var score;
+		
+		if(depth == 0){
+			return self.evalBoard();
+		}
+		
+		var possibleMoves = self.findAllPossibleMoves();
+		
+		for(var i = 0; i < possibleMoves.length; i++){
+			self.makeMove(possibleMoves[i]);
+			
+			if (self.evalBoard() <= -WINNING_SCORE){
+				self.undoMove(possibleMoves[i]);
+				return WINNING_SCORE + depth;
+			}			
+			
+			score = -negaMax(depth - 1, -beta, -alpha);
+			self.undoMove(possibleMoves[i]);
+			
+			if(score >= beta)
+				return score;
+			if(score > alpha){
+				alpha = score;
+				bestScore = score;
+			}
+				
+		}
+		return bestScore;
+	};
+	
+	this.findBestMove = function () {
+		var depth = 10;
+		var alpha =-WINNING_SCORE;
+		var beta = WINNING_SCORE;
+		
+		var possibleMoves = self.findAllPossibleMoves();
+		var bestScore = -WINNING_SCORE;
+		var bestMove;
+		var move, score;
+		
+		for (var i = 0; i < possibleMoves.length; i++) {
+			move = possibleMoves[i];
+			
+			self.makeMove(move);
+			
+			score = -negaMax(depth - 1, -beta, -alpha);			
+			if(score > bestScore){
+				bestScore = score;
+				bestMove = move;
+			}
+			
+			self.undoMove(move);
+		}
+		
+		if (bestMove == null){
+			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
+		}
+		return bestMove;
+	}
 	
 }
 
@@ -399,15 +613,36 @@ function MyTurn() {
 	// This is my testing algorithm, which will pick a random valid move, then move.
 	// This array contain which move can I make.	
 	var myBoard = new  Board(board, myPosition, enemyPosition);
-	var suitableDir = myBoard.findAllPossibleMoves();
+	//var suitableDir = myBoard.findAllPossibleMoves();
 
-	// Choose one of the suitable direction
+	/*// Choose one of the suitable direction
 	var selection = (Math.random() * suitableDir.length) >> 0;
 	var dir = suitableDir[selection];	
 	
 	//myBoard.makeMove(dir);
-	console.log(dir);	
+	
+	console.log(myBoard.evalBoard());
+	*/
+	
+	/*var bestMove;
+	var bestScore = -WINNING_SCORE;
+	var dir;
+	for (var i = 0; i < suitableDir.length; i++){
+		dir = suitableDir[i];
+		myBoard.makeMove(dir);
+		var score = -myBoard.evalBoard();
+		if(score > bestScore){
+			bestMove = dir;
+			bestScore = score;
+		}
+		myBoard.undoMove(dir);
+	}
+	
+	console.log(bestScore);
+	*/
+	var bestMove = myBoard.findBestMove();
 	
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
-	Command(dir);
+	Command(bestMove);
 }
+
