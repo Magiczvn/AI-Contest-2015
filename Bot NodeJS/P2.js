@@ -262,7 +262,8 @@ function Send(data) {
 //
 // That's pretty much about it. Now, let's start coding.
 // ===========================================================
-
+var _min = Math.min;
+var _max = Math.max;
 var directions = [DIRECTION_LEFT, DIRECTION_RIGHT, DIRECTION_UP, DIRECTION_DOWN];
 
 var direction_commands = {};
@@ -285,6 +286,23 @@ for(var i = 0; i < MAP_SIZE; i++){
 	for(var j = 0; j < MAP_SIZE; j++){
 		tempBoard[i].push(BLOCK_EMPTY);
 	}
+}
+
+
+var RED = 1;
+var BLACK = 0;
+
+var findColor = function (position) {
+	return (position.x ^ position.y)&1;
+}
+
+var num_fillable = function (colorcount) {
+	var startcolor = colorcount.startcolor;
+
+	if(startcolor == RED)
+    	return 2*_min(colorcount.red-1, colorcount.black) +  (colorcount.black >= colorcount.red ? 1 : 0);
+	else
+    	return 2*_min(colorcount.red, colorcount.black-1) +  (colorcount.red >= colorcount.black ? 1 : 0);
 }
 
 function Board(board, myPosition, enemyPosition){
@@ -491,6 +509,28 @@ function Board(board, myPosition, enemyPosition){
 		possibleMoves_Scores[currentPlayer] = 0;
 		possibleMoves_Scores[enemyPlayer] = 0;
 
+		var colorcounts = {};
+		colorcounts[currentPlayer] = {
+			red: 0,
+			black: 0,
+			startcolor : findColor(currentPlayer)
+		}
+		colorcounts[enemyPlayer] = {
+			red: 0,
+			black: 0,
+			startcolor : findColor(enemyPlayer)
+		}
+
+		if(colorcounts[currentPlayer].startcolor == RED)
+			colorcounts[currentPlayer].red = -1;
+		else
+			colorcounts[currentPlayer].black = -1;
+
+		if(colorcounts[enemyPlayer].startcolor == RED)
+			colorcounts[enemyPlayer].red = -1;
+		else
+			colorcounts[enemyPlayer].black = -1;
+
 		while(queue.length > 0){
 			position = queue.shift();
 
@@ -499,6 +539,13 @@ function Board(board, myPosition, enemyPosition){
 
 			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
 				continue;
+
+			if(findColor(position) == RED){
+				colorcounts[position.player].red++;
+			}
+			else {
+				colorcounts[position.player].black++;
+			}
 
 			cells_count[position.player]++;
 
@@ -540,8 +587,8 @@ function Board(board, myPosition, enemyPosition){
 		//Now we have number of cells each player can own
 		var score = 0;
 
-		score += cells_count[currentPlayer];
-		score -= cells_count[enemyPlayer];
+		score += num_fillable(colorcounts[currentPlayer]);
+		score -= num_fillable(colorcounts[enemyPlayer]);
 
 		score *= BLOCKOWNED_SCORE;
 		score += possibleMoves_Scores[currentPlayer] - possibleMoves_Scores[enemyPlayer];
