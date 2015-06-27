@@ -486,11 +486,6 @@ function Board(board, myPosition, enemyPosition){
 		var x, y, x_new, y_new;
 		var blockValue, newStepValue;
 		var direction_command;
-		var possibleMoves_Scores = {};
-
-		possibleMoves_Scores[currentPlayer] = 0;
-		possibleMoves_Scores[enemyPlayer] = 0;
-
 		while(queue.length > 0){
 			position = queue.shift();
 
@@ -531,7 +526,7 @@ function Board(board, myPosition, enemyPosition){
 					else if(blockValue == -newStepValue){
 						tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE;
 					}
-					possibleMoves_Scores[position.player]++;
+
 				}
 			}
 
@@ -540,11 +535,10 @@ function Board(board, myPosition, enemyPosition){
 		//Now we have number of cells each player can own
 		var score = 0;
 
-		score += cells_count[currentPlayer];
-		score -= cells_count[enemyPlayer];
+		score += cells_count[currentPlayer]*scoreMultiplier[currentPlayerPossibleMoves.length];
+		score -= cells_count[enemyPlayer]*scoreMultiplier[enemyPlayerPossibleMoves.length];
 
 		score *= BLOCKOWNED_SCORE;
-		score += possibleMoves_Scores[currentPlayer] - possibleMoves_Scores[enemyPlayer];
 
 		return score;
 
