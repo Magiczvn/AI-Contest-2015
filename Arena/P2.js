@@ -102,6 +102,11 @@ function OnUpdatePacket(data, offset) {
 		ConvertVariable();
 		MyTurn();
 	}
+	else {
+		// Do something while waiting for your opponent
+		ConvertVariable();
+		TheirTurn();
+	}
 }
 
 // Player need to give a command here
@@ -257,7 +262,7 @@ function Send(data) {
 // - BLOCK_PLAYER_2_TRAIL = 4; Square player 2 went through before
 // - BLOCK_OBSTACLE = 5;
 // Which player you are? You can know it from variable "index"
-// Player 1 have value 0, and player 2 have value 1, but you probably
+// Player 1 have value 1, and player 2 have value 2, but you probably
 // don't care about that anyway.
 //
 // That's pretty much about it. Now, let's start coding.
@@ -305,7 +310,7 @@ var num_fillable = function (colorcount) {
     	return 2*_min(colorcount.red, colorcount.black-1) +  (colorcount.red >= colorcount.black ? 1 : 0);
 }
 
-function Board(board, myPosition, enemyPosition){
+function Board(myPosition, enemyPosition){
 	this.width = MAP_SIZE;
 	this.height = MAP_SIZE;
 
@@ -338,7 +343,7 @@ function Board(board, myPosition, enemyPosition){
 				newBoard[i].push(BLOCK_EMPTY);
 			}
 		}
-		self.board = board;
+		self.board = newBoard;
 	};
 
 
@@ -362,9 +367,6 @@ function Board(board, myPosition, enemyPosition){
 			}
 		}
 	};
-
-	this.createBoard();
-	this.copyBoard(board);
 
 	this.isValidPosition = function(x, y){
 		return (x >= 0) && (x < self.width) && (y >= 0) && (y < self.height) && (self.board[x][y] == BLOCK_EMPTY);
@@ -581,6 +583,10 @@ function Board(board, myPosition, enemyPosition){
 						tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE;
 						is2PlayersConnected = true;
 					}
+					else if(blockValue == -position.stepvalue){
+						is2PlayersConnected = true;
+					}
+
 					possibleMoves_Scores[position.player]++;
 				}
 			}
@@ -778,7 +784,7 @@ function Board(board, myPosition, enemyPosition){
 	};
 
 	var DFS = function (depth, alpha, beta) {
-		var bestScore = 0;
+		var bestScore = -depth;
 		var score;
 
 		if(depth == 0){
@@ -811,7 +817,6 @@ function Board(board, myPosition, enemyPosition){
 
 		self.evalBoard(0);
 		var isConnected = self.isConnected;
-		console.log(isConnected);
 
 		for (var i = 0; i < possibleMoves.length; i++) {
 			move = possibleMoves[i];
@@ -823,11 +828,13 @@ function Board(board, myPosition, enemyPosition){
 			}
 			self.undoMove(move, !isConnected);
 		}
-		console.log(self.board);
+
+		console.log(bestScore, bestMove);
 
 		if (bestMove == null){
 			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
 		}
+
 		return bestMove;
 	}
 	self.isConnected = true;
@@ -835,9 +842,22 @@ function Board(board, myPosition, enemyPosition){
 
 var myBoard = null;
 function MyTurn() {
+	console.log("---------------------MyTurn-----------------------");
 	if(myBoard == null)
-	 	myBoard = new  Board(board, myPosition, enemyPosition);
+	 	myBoard = new  Board(myPosition, enemyPosition);
+	myBoard.copyBoard(board);
+	console.log(myBoard.board);
+
 	var bestMove = myBoard.findBestMove();
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
 	Command(bestMove);
+}
+
+function TheirTurn() {
+	console.log("---------------------TheirTurn-----------------------");
+	if (myBoard)
+	{
+		myBoard.copyBoard(board);
+		console.log(myBoard.board);
+	}
 }
