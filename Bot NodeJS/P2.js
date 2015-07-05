@@ -8,6 +8,8 @@
 // ===========================================================
 
 // Get the host and port from argurment
+var VERSION = 1;
+
 var host = "127.0.0.1";
 var port = 3011;
 var key = 0;
@@ -176,6 +178,7 @@ var socket = ws.connect ("ws://" + host + ":" + port, [], function () {
 	var data = "";
 	data += String.fromCharCode(COMMAND_SEND_KEY);
 	data += String.fromCharCode(key);
+	data += String.fromCharCode(VERSION);
 	Send (data);
 });
 socket.on("text", function (data) {
@@ -267,6 +270,7 @@ function Send(data) {
 //
 // That's pretty much about it. Now, let's start coding.
 // ===========================================================
+
 var _min = Math.min;
 var _max = Math.max;
 var directions = [DIRECTION_LEFT, DIRECTION_RIGHT, DIRECTION_UP, DIRECTION_DOWN];

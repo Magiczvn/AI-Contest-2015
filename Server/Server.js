@@ -6,9 +6,8 @@
 // ===========================================================
 
 
-
-
 // Get the listening port from argurment
+var VERSION = 1;
 var isCompetitive = false;
 var matchID = 0;
 var listeningPort = 3011;
@@ -163,7 +162,11 @@ function StartGame () {
 	if (gameState == GAMESTATE_WAIT_FOR_PLAYER) {
 		gameState = GAMESTATE_COMMENCING;
 		Broadcast();
-		clearTimeout(timeOutTimer);
+		
+		if (isCompetitive == true) {
+			if (timeOutTimer != null) clearTimeout(timeOutTimer);
+			timeOutTimer = setTimeout (TimeOut, THINKING_TIME);
+		}
 	}
 }
 
@@ -319,10 +322,10 @@ function EndGame (w) {
 	// Print the result for the parent
 	console.log (winner + gameReplay);
 	
-	// Shutdown after 0.5 sec
+	// Shutdown after 0.2 sec
 	setTimeout (function () {
 		CloseServer();
-	}, 500);
+	}, 200);
 }
 
 function ConvertCoord (x, y) {
@@ -365,6 +368,10 @@ var server = ws.createServer(function (socket) {
 			if (socket.index == null) {
 				// Get the key
 				var key = argument;
+				var version = 0;
+				if (data[2] != null) {
+					version = data[2].charCodeAt(0);
+				}
 				
 				if (isCompetitive == false) {
 					// If this is not a competitive match
@@ -378,10 +385,10 @@ var server = ws.createServer(function (socket) {
 				}
 				else {
 					// Else, we compare the key
-					if (key == key1) {
+					if (key == key1 && version == VERSION) {
 						socket.index = 1;
 					}
-					else if (key == key2) {
+					else if (key == key2 && version == VERSION) {
 						socket.index = 2;
 					}
 					else {
@@ -463,7 +470,7 @@ function CloseServer() {
 			socketList[i].close (1000, "Game end!");
 		}
 	}
-	//process.exit(0);
+	process.exit(0);
 }
 
 InitGame();
