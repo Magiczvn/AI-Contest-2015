@@ -287,6 +287,7 @@ var WINNING_SCORE = 10000000;
 var BLOCKOWNED_SCORE = 10000;
 
 var scoreMultiplier = [0, 0.5, 1.5, 1];
+var MAX_THINKINGTIME = 2900;
 
 /*Use temp board to avoid create new board */
 var tempBoard = [];
@@ -809,12 +810,26 @@ function Board(myPosition, enemyPosition){
 		return bestScore;
 	}
 
+	this.isTimeOut = false;
+	this.startTimer = function () {
+		var d = new Date();
+		self.startTime = d.getTime();
+	}
+
+	this.checkTimeOut = function () {
+		var d = new Date();
+		self.isTimeOut = (d.getTime() - self.startTime) >= MAX_THINKINGTIME;
+
+		return self.isTimeOut;
+	}
+
 	this.findBestMove = function () {
-		var depth = 10;
+		var MAX_DEPTH = 100;
+		self.isTimeOut = false;
+
 		var alpha =-WINNING_SCORE;
 		var beta = WINNING_SCORE;
 
-		var possibleMoves = self.findAllPossibleMoves();
 		var bestScore = -WINNING_SCORE;
 		var bestMove;
 		var move, score;
@@ -822,16 +837,22 @@ function Board(myPosition, enemyPosition){
 		self.evalBoard(0);
 		var isConnected = self.isConnected;
 
-		for (var i = 0; i < possibleMoves.length; i++) {
-			move = possibleMoves[i];
-			self.makeMove(move, !isConnected);
-			score = isConnected?-negaMax(depth - 1, -beta, -alpha):DFS(depth - 1, alpha, beta);
-			if(score > bestScore){
-				bestScore = score;
-				bestMove = move;
+		var possibleMoves = self.findAllPossibleMoves();
+		for (var depth = 1; depth <= MAX_DEPTH && !self.isTimeOut ; depth++) {
+			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
+				move = possibleMoves[i];
+				self.makeMove(move, !isConnected);
+				score = isConnected?-negaMax(depth - 1, -beta, -alpha):DFS(depth - 1, alpha, beta);
+				if(score > bestScore){
+					bestScore = score;
+					bestMove = move;
+				}
+				self.undoMove(move, !isConnected);
 			}
-			self.undoMove(move, !isConnected);
+
 		}
+
+
 
 		console.log(bestScore, bestMove);
 
