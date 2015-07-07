@@ -287,6 +287,7 @@ var WINNING_SCORE = 10000000;
 var BLOCKOWNED_SCORE = 10000;
 
 var scoreMultiplier = [0, 0.5, 1.5, 1];
+var MAX_THINKINGTIME = 2990;
 
 /*Use temp board to avoid create new board */
 var tempBoard = [];
@@ -462,6 +463,9 @@ function Board(myPosition, enemyPosition){
 	};
 
 	this.evalBoard = function (depth) {
+		if(self.checkTimeOut())
+			return -WINNING_SCORE;
+
 		var endGameScore = checkEndGame(depth);
 		if(endGameScore != null){
 			return endGameScore;
@@ -621,6 +625,9 @@ function Board(myPosition, enemyPosition){
 	};
 
 	var evalBoardDFS = function (depth){
+		if(self.checkTimeOut())
+			return WINNING_SCORE;
+
 		var board = self.board;
 
 		//Fill temp board with values
@@ -771,7 +778,7 @@ function Board(myPosition, enemyPosition){
 
 		var possibleMoves = self.findAllPossibleMoves();
 
-		for(var i = 0; i < possibleMoves.length; i++){
+		for(var i = 0; i < possibleMoves.length && !self.isTimeOut; i++){
 			self.makeMove(possibleMoves[i]);
 			score = -negaMax(depth - 1, -beta, -alpha);
 			self.undoMove(possibleMoves[i]);
@@ -796,44 +803,85 @@ function Board(myPosition, enemyPosition){
 		}
 
 		var possibleMoves = self.findAllPossibleMoves();
-		for(var i = 0; i < possibleMoves.length; i++){
+		for(var i = 0; i < possibleMoves.length && !self.isTimeOut; i++){
 
 			self.makeMove(possibleMoves[i], true);
 			score = DFS(depth - 1, alpha, beta);
 			self.undoMove(possibleMoves[i], true);
 
-			if(score > bestScore){
+			if(score >= beta)
+				return score;
+
+			if(score > alpha){
+				alpha = score;
 				bestScore = score;
 			}
+
+			self.checkTimeOut();
 		}
 		return bestScore;
 	}
 
+	this.isTimeOut = false;
+	this.startTimer = function () {
+		var d = new Date();
+		self.startTime = d.getTime();
+		self.isTimeOut = false;
+	}
+
+	this.getTimeElapsed = function () {
+		var d = new Date();
+		return d.getTime() - self.startTime;
+	}
+
+	this.checkTimeOut = function () {
+		var d = new Date();
+		self.isTimeOut = (d.getTime() - self.startTime) >= MAX_THINKINGTIME;
+
+		return self.isTimeOut;
+	}
+
 	this.findBestMove = function () {
-		var depth = 10;
+		var MAX_DEPTH = 50;
+
 		var alpha =-WINNING_SCORE;
 		var beta = WINNING_SCORE;
 
-		var possibleMoves = self.findAllPossibleMoves();
 		var bestScore = -WINNING_SCORE;
 		var bestMove;
 		var move, score;
 
 		self.evalBoard(0);
 		var isConnected = self.isConnected;
+		var highestDepth = 0;
+		var possibleMoves = self.findAllPossibleMoves();
+		for (var depth = 2; depth <= MAX_DEPTH && !self.isTimeOut ; depth+=2) {
+			var bestScoreCurrentDepth = -WINNING_SCORE;
+			var bestMoveCurrentDepth;
 
-		for (var i = 0; i < possibleMoves.length; i++) {
-			move = possibleMoves[i];
-			self.makeMove(move, !isConnected);
-			score = isConnected?-negaMax(depth - 1, -beta, -alpha):DFS(depth - 1, alpha, beta);
-			if(score > bestScore){
-				bestScore = score;
-				bestMove = move;
+			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
+				move = possibleMoves[i];
+				self.makeMove(move, !isConnected);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScore):DFS(depth - 1, alpha, bestScore);
+				if(score > bestScoreCurrentDepth){
+					bestScoreCurrentDepth = score;
+					bestMoveCurrentDepth = move;
+				}
+				self.undoMove(move, !isConnected);
 			}
-			self.undoMove(move, !isConnected);
+			if(!self.isTimeOut){
+				bestScore = bestScoreCurrentDepth;
+				bestMove = bestMoveCurrentDepth;
+				highestDepth = depth;
+
+				if(bestScore >= WINNING_SCORE){
+					break;
+				}
+			}
+
 		}
 
-		console.log(bestScore, bestMove);
+		console.log("Depth: %s", highestDepth);
 
 		if (bestMove == null){
 			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
@@ -850,9 +898,10 @@ function MyTurn() {
 	if(myBoard == null)
 	 	myBoard = new  Board(myPosition, enemyPosition);
 	myBoard.copyBoard(board);
-	console.log(myBoard.board);
 
+	myBoard.startTimer();
 	var bestMove = myBoard.findBestMove();
+	console.log("Time: %s", myBoard.getTimeElapsed());
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
 	Command(bestMove);
 }

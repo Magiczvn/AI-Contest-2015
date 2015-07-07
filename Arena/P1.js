@@ -8,6 +8,8 @@
 // ===========================================================
 
 // Get the host and port from argurment
+var VERSION = 1;
+
 var host = "127.0.0.1";
 var port = 3011;
 var key = 0;
@@ -102,6 +104,11 @@ function OnUpdatePacket(data, offset) {
 		ConvertVariable();
 		MyTurn();
 	}
+	else {
+		// Do something while waiting for your opponent
+		ConvertVariable();
+		//TheirTurn();
+	}
 }
 
 // Player need to give a command here
@@ -171,6 +178,7 @@ var socket = ws.connect ("ws://" + host + ":" + port, [], function () {
 	var data = "";
 	data += String.fromCharCode(COMMAND_SEND_KEY);
 	data += String.fromCharCode(key);
+	data += String.fromCharCode(VERSION);
 	Send (data);
 });
 socket.on("text", function (data) {
@@ -257,11 +265,12 @@ function Send(data) {
 // - BLOCK_PLAYER_2_TRAIL = 4; Square player 2 went through before
 // - BLOCK_OBSTACLE = 5;
 // Which player you are? You can know it from variable "index"
-// Player 1 have value 0, and player 2 have value 1, but you probably
+// Player 1 have value 1, and player 2 have value 2, but you probably
 // don't care about that anyway.
 //
 // That's pretty much about it. Now, let's start coding.
 // ===========================================================
+
 var _min = Math.min;
 var _max = Math.max;
 var directions = [DIRECTION_LEFT, DIRECTION_RIGHT, DIRECTION_UP, DIRECTION_DOWN];
