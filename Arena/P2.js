@@ -287,7 +287,7 @@ var WINNING_SCORE = 10000000;
 var BLOCKOWNED_SCORE = 10000;
 
 var scoreMultiplier = [0, 0.5, 1.5, 1];
-var MAX_THINKINGTIME = 2990;
+var MAX_THINKINGTIME = 2950;
 
 /*Use temp board to avoid create new board */
 var tempBoard = [];
@@ -523,12 +523,12 @@ function Board(myPosition, enemyPosition){
 		colorcounts[currentPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(currentPlayer)
+			startcolor : findColor(currentPlayerPosition)
 		}
 		colorcounts[enemyPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(enemyPlayer)
+			startcolor : findColor(enemyPlayerPosition)
 		}
 
 		if(colorcounts[currentPlayer].startcolor == RED)
@@ -669,7 +669,7 @@ function Board(myPosition, enemyPosition){
 		colorcounts[currentPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(currentPlayer)
+			startcolor : findColor(currentPlayerPosition)
 		}
 
 
@@ -881,7 +881,7 @@ function Board(myPosition, enemyPosition){
 
 		}
 
-		console.log("Depth: %s", highestDepth);
+		//console.log("Depth: %s", highestDepth);
 
 		if (bestMove == null){
 			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
@@ -894,23 +894,17 @@ function Board(myPosition, enemyPosition){
 
 var myBoard = null;
 function MyTurn() {
-	console.log("---------------------MyTurn-----------------------");
 	if(myBoard == null)
 	 	myBoard = new  Board(myPosition, enemyPosition);
 	myBoard.copyBoard(board);
 
 	myBoard.startTimer();
 	var bestMove = myBoard.findBestMove();
-	console.log("Time: %s", myBoard.getTimeElapsed());
+	//console.log("Time: %s", myBoard.getTimeElapsed());
 	// Call "Command". Don't ever forget this. And make it quick, you only have 3 sec to call this.
 	Command(bestMove);
 }
 
 function TheirTurn() {
-	console.log("---------------------TheirTurn-----------------------");
-	if (myBoard)
-	{
-		myBoard.copyBoard(board);
-		console.log(myBoard.board);
-	}
+
 }

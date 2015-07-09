@@ -523,12 +523,12 @@ function Board(myPosition, enemyPosition){
 		colorcounts[currentPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(currentPlayer)
+			startcolor : findColor(currentPlayerPosition)
 		}
 		colorcounts[enemyPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(enemyPlayer)
+			startcolor : findColor(enemyPlayerPosition)
 		}
 
 		if(colorcounts[currentPlayer].startcolor == RED)
@@ -669,7 +669,7 @@ function Board(myPosition, enemyPosition){
 		colorcounts[currentPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(currentPlayer)
+			startcolor : findColor(currentPlayerPosition)
 		}
 
 
@@ -894,7 +894,6 @@ function Board(myPosition, enemyPosition){
 
 var myBoard = null;
 function MyTurn() {
-	console.log("---------------------MyTurn-----------------------");
 	if(myBoard == null)
 	 	myBoard = new  Board(myPosition, enemyPosition);
 	myBoard.copyBoard(board);
@@ -907,10 +906,5 @@ function MyTurn() {
 }
 
 function TheirTurn() {
-	if(myBoard == null)
-	 	myBoard = new  Board(myPosition, enemyPosition);
-	myBoard.startTimer();
-	while(!myBoard.isTimeOut()){
 
-	}
 }
