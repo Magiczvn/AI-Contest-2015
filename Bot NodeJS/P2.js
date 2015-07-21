@@ -873,11 +873,12 @@ function Board(myPosition, enemyPosition){
 			var bestMoveCurrentDepth;
 
 			evalutions = 0;
+			var max_eval = 0;
 
 			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
 				move = possibleMoves[i];
 				self.makeMove(move, !isConnected);
-				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth - 1, alpha, beta);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth - 1, bestScoreCurrentDepth, beta);
 				if(score > bestScoreCurrentDepth){
 					bestScoreCurrentDepth = score;
 					bestMoveCurrentDepth = move;
@@ -888,6 +889,7 @@ function Board(myPosition, enemyPosition){
 				bestScore = bestScoreCurrentDepth;
 				bestMove = bestMoveCurrentDepth;
 				highestDepth = depth;
+				max_eval = evalutions
 
 				if(bestScore >= WINNING_SCORE){
 					break;
@@ -896,7 +898,7 @@ function Board(myPosition, enemyPosition){
 
 		}
 
-		console.log("Depth: %s - Evaltutions: %s",highestDepth, evalutions);
+		console.log("Depth: %s - Evaltutions: %s",highestDepth, max_eval);
 
 		if (bestMove == null){
 			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
