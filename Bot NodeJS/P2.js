@@ -286,8 +286,7 @@ var MYBLOCK_OBSTACLE = 100;
 var WINNING_SCORE = 10000000;
 var BLOCKOWNED_SCORE = 10000;
 
-var scoreMultiplier = [0, 0.5, 1.5, 1];
-var MAX_THINKINGTIME = 2950;
+var MAX_THINKINGTIME = 2900;
 
 /*Use temp board to avoid create new board */
 var tempBoard = [];
@@ -314,6 +313,8 @@ var num_fillable = function (colorcount) {
 	else
     	return 2*_min(colorcount.red, colorcount.black-1) +  (colorcount.red >= colorcount.black ? 1 : 0);
 }
+
+var evalutions = 0;
 
 function Board(myPosition, enemyPosition){
 	this.width = MAP_SIZE;
@@ -471,6 +472,10 @@ function Board(myPosition, enemyPosition){
 			return endGameScore;
 		}
 
+		if(depth > 0)
+			return null;
+		evalutions++;
+
 		var board = self.board;
 
 		//Fill temp board with values
@@ -619,12 +624,15 @@ function Board(myPosition, enemyPosition){
 
 		score += possibleMoves_Scores[currentPlayer] - possibleMoves_Scores[enemyPlayer];
 		self.isConnected = is2PlayersConnected;
+		self.mySpace = cells_count[currentPlayer];
+		self.enemySpace = cells_count[enemyPlayer];
 
 		return score;
 
 	};
 
 	var evalBoardDFS = function (depth){
+		evalutions++;
 		if(self.checkTimeOut())
 			return WINNING_SCORE;
 
@@ -842,7 +850,6 @@ function Board(myPosition, enemyPosition){
 	}
 
 	this.findBestMove = function () {
-		var MAX_DEPTH = 50;
 
 		var alpha =-WINNING_SCORE;
 		var beta = WINNING_SCORE;
@@ -852,17 +859,25 @@ function Board(myPosition, enemyPosition){
 		var move, score;
 
 		self.evalBoard(0);
+
+
 		var isConnected = self.isConnected;
 		var highestDepth = 0;
 		var possibleMoves = self.findAllPossibleMoves();
-		for (var depth = 2; depth <= MAX_DEPTH && !self.isTimeOut ; depth+=2) {
+
+		var depth_increasement = isConnected?2:1;
+		var MAX_DEPTH = self.mySpace*depth_increasement;
+
+		for (var depth = depth_increasement; depth <= MAX_DEPTH && !self.isTimeOut ; depth+=depth_increasement) {
 			var bestScoreCurrentDepth = -WINNING_SCORE;
 			var bestMoveCurrentDepth;
+
+			evalutions = 0;
 
 			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
 				move = possibleMoves[i];
 				self.makeMove(move, !isConnected);
-				score = isConnected?-negaMax(depth - 1, -beta, -bestScore):DFS(depth - 1, alpha, bestScore);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth - 1, alpha, beta);
 				if(score > bestScoreCurrentDepth){
 					bestScoreCurrentDepth = score;
 					bestMoveCurrentDepth = move;
@@ -881,7 +896,7 @@ function Board(myPosition, enemyPosition){
 
 		}
 
-		//console.log("Depth: %s", highestDepth);
+		console.log("Depth: %s - Evaltutions: %s",highestDepth, evalutions);
 
 		if (bestMove == null){
 			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
