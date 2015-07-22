@@ -536,16 +536,6 @@ function Board(myPosition, enemyPosition){
 			startcolor : findColor(enemyPlayerPosition)
 		}
 
-		if(colorcounts[currentPlayer].startcolor == RED)
-			colorcounts[currentPlayer].red = -1;
-		else
-			colorcounts[currentPlayer].black = -1;
-
-		if(colorcounts[enemyPlayer].startcolor == RED)
-			colorcounts[enemyPlayer].red = -1;
-		else
-			colorcounts[enemyPlayer].black = -1;
-
 		var is2PlayersConnected  = false;
 
 		while(queue.length > 0){
@@ -680,13 +670,6 @@ function Board(myPosition, enemyPosition){
 			startcolor : findColor(currentPlayerPosition)
 		}
 
-
-		if(colorcounts[currentPlayer].startcolor == RED)
-			colorcounts[currentPlayer].red = -1;
-		else
-			colorcounts[currentPlayer].black = -1;
-
-
 		while(queue.length > 0){
 			position = queue.shift();
 
@@ -806,11 +789,11 @@ function Board(myPosition, enemyPosition){
 		var bestScore = -depth;
 		var score;
 
-		if(depth == 0){
+		var possibleMoves = self.findAllPossibleMoves();
+		if(depth == 0&&possibleMoves.length > 0){
 			return evalBoardDFS(depth);
 		}
 
-		var possibleMoves = self.findAllPossibleMoves();
 		for(var i = 0; i < possibleMoves.length && !self.isTimeOut; i++){
 
 			self.makeMove(possibleMoves[i], true);
@@ -827,6 +810,7 @@ function Board(myPosition, enemyPosition){
 
 			self.checkTimeOut();
 		}
+
 		return bestScore;
 	}
 
@@ -868,17 +852,17 @@ function Board(myPosition, enemyPosition){
 		var depth_increasement = isConnected?2:1;
 		var MAX_DEPTH = self.mySpace*depth_increasement;
 
+		var max_eval = 0;
 		for (var depth = depth_increasement; depth <= MAX_DEPTH && !self.isTimeOut ; depth+=depth_increasement) {
 			var bestScoreCurrentDepth = -WINNING_SCORE;
 			var bestMoveCurrentDepth;
 
 			evalutions = 0;
-			var max_eval = 0;
 
 			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
 				move = possibleMoves[i];
 				self.makeMove(move, !isConnected);
-				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth - 1, bestScoreCurrentDepth, beta);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth , bestScoreCurrentDepth, beta);
 				if(score > bestScoreCurrentDepth){
 					bestScoreCurrentDepth = score;
 					bestMoveCurrentDepth = move;
