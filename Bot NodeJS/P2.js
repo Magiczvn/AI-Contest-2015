@@ -544,9 +544,6 @@ function Board(myPosition, enemyPosition){
 			x = position.x;
 			y = position.y;
 
-			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
-				continue;
-
 			if(findColor(position) == RED){
 				colorcounts[position.player].red++;
 			}
@@ -555,6 +552,9 @@ function Board(myPosition, enemyPosition){
 			}
 
 			cells_count[position.player]++;
+
+			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
+				continue;
 
 			newStepValue = position.stepvalue + position.player;
 
@@ -848,7 +848,7 @@ function Board(myPosition, enemyPosition){
 			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
 				move = possibleMoves[i];
 				self.makeMove(move, !isConnected);
-				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth , bestScoreCurrentDepth, beta);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth , bestScoreCurrentDepth, 0);
 				if(score > bestScoreCurrentDepth){
 					bestScoreCurrentDepth = score;
 					bestMoveCurrentDepth = move;
@@ -868,7 +868,7 @@ function Board(myPosition, enemyPosition){
 
 		}
 
-		//console.log("Depth: %s - Evaltutions: %s",highestDepth, max_eval);
+		console.log("Depth: %s - Evaltutions: %s",highestDepth, max_eval);
 
 		if (bestMove == null){
 			bestMove = possibleMoves[(Math.random() * possibleMoves.length) >> 0];
