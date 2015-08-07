@@ -286,7 +286,7 @@ var MYBLOCK_OBSTACLE = 100;
 var WINNING_SCORE = 10000000;
 var BLOCKOWNED_SCORE = 10000;
 
-var MAX_THINKINGTIME = 2900;
+var MAX_THINKINGTIME = 2800;
 
 /*Use temp board to avoid create new board */
 var tempBoard = [];
@@ -463,6 +463,26 @@ function Board(myPosition, enemyPosition){
 		return false;
 	};
 
+	var isDeadEnd = function (board, x, y) {
+		var x_new, y_new;
+		var boardValue;
+		var oldBoardValue = board[x][y];
+		var numObstacle = 0;
+		for( var i = 0; i < directions.length; i++){
+			direction_command = direction_commands[directions[i]];
+
+			x_new = x + direction_command.x;
+			y_new = y + direction_command.y;
+
+			if((x_new >= 0) && (x_new < MAP_SIZE) && (y_new >= 0) && (y_new < MAP_SIZE)){
+				boardValue = board[x_new][y_new];
+				 if(boardValue == MYBLOCK_OBSTACLE)
+					numObstacle++;
+			}
+		}
+		return numObstacle >=3;
+	}
+
 	this.evalBoard = function (depth) {
 		if(self.checkTimeOut())
 			return -WINNING_SCORE;
@@ -528,12 +548,14 @@ function Board(myPosition, enemyPosition){
 		colorcounts[currentPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(currentPlayerPosition)
+			startcolor : findColor(currentPlayerPosition),
+			deadend: 0
 		}
 		colorcounts[enemyPlayer] = {
 			red: 0,
 			black: 0,
-			startcolor : findColor(enemyPlayerPosition)
+			startcolor : findColor(enemyPlayerPosition),
+			deadend: 0
 		}
 
 		var is2PlayersConnected  = false;
@@ -544,17 +566,22 @@ function Board(myPosition, enemyPosition){
 			x = position.x;
 			y = position.y;
 
-			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
-				continue;
+			cells_count[position.player]++;
 
-			if(findColor(position) == RED){
-				colorcounts[position.player].red++;
+			if (!position.isDeadEnd){
+				if(findColor(position) == RED){
+					colorcounts[position.player].red++;
+				}
+				else {
+					colorcounts[position.player].black++;
+				}
 			}
 			else {
-				colorcounts[position.player].black++;
+				continue;
 			}
 
-			cells_count[position.player]++;
+			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
+				continue;
 
 			newStepValue = position.stepvalue + position.player;
 
@@ -564,8 +591,6 @@ function Board(myPosition, enemyPosition){
 
 				x_new = x + direction_command.x;
 				y_new = y + direction_command.y;
-
-
 
 				if((x_new >= 0) && (x_new < self.width) && (y_new >= 0) && (y_new < self.height) && (tempBoard[x_new][y_new] != MYBLOCK_OBSTACLE)){
 					/*There are two case we must check:
@@ -590,6 +615,13 @@ function Board(myPosition, enemyPosition){
 						is2PlayersConnected = true;
 					}
 
+					if(isDeadEnd(tempBoard, x_new, y_new)){
+						colorcounts[position.player].deadend++;
+						if(blockValue == BLOCK_EMPTY){
+							queue[queue.length - 1].isDeadEnd = true;
+						}
+					}
+
 					possibleMoves_Scores[position.player]++;
 				}
 			}
@@ -604,13 +636,18 @@ function Board(myPosition, enemyPosition){
 		var myFillable = num_fillable(myColorCount);
 		var enemyFillable = num_fillable(enemyColorCount);
 
+		var myDeadEnd = myColorCount.deadend;// > 1?myColorCount.deadend - 1:myColorCount.deadend;
+		var enemyDeadEnd = enemyColorCount.deadend;//> 1?enemyColorCount.deadend - 1:enemyColorCount.deadend;
+
 		score += myFillable;
 		score -= enemyFillable;
 
+		score += enemyDeadEnd > myDeadEnd && enemyDeadEnd > 1?0.1:0;
+
 		score *= BLOCKOWNED_SCORE;
 
-		possibleMoves_Scores[currentPlayer] -= (myColorCount.red + myColorCount.black) - myFillable;
-		possibleMoves_Scores[enemyPlayer] -= (enemyColorCount.red + enemyColorCount.black) - enemyFillable;
+		possibleMoves_Scores[currentPlayer] -= (myColorCount.red + myColorCount.black) - myFillable - myDeadEnd;
+		possibleMoves_Scores[enemyPlayer] -= (enemyColorCount.red + enemyColorCount.black) - enemyFillable - enemyDeadEnd;
 
 		score += possibleMoves_Scores[currentPlayer] - possibleMoves_Scores[enemyPlayer];
 		self.isConnected = is2PlayersConnected;
@@ -620,6 +657,8 @@ function Board(myPosition, enemyPosition){
 		return score;
 
 	};
+
+
 
 	var evalBoardDFS = function (depth){
 		evalutions++;
@@ -692,6 +731,7 @@ function Board(myPosition, enemyPosition){
 
 				x_new = x + direction_command.x;
 				y_new = y + direction_command.y;
+
 
 				if((x_new >= 0) && (x_new < MAP_SIZE) && (y_new >= 0) && (y_new < MAP_SIZE) && (tempBoard[x_new][y_new] != MYBLOCK_OBSTACLE)){
 					/*There are two case we must check:
@@ -848,7 +888,7 @@ function Board(myPosition, enemyPosition){
 			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
 				move = possibleMoves[i];
 				self.makeMove(move, !isConnected);
-				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth , bestScoreCurrentDepth, beta);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth , bestScoreCurrentDepth, 0);
 				if(score > bestScoreCurrentDepth){
 					bestScoreCurrentDepth = score;
 					bestMoveCurrentDepth = move;

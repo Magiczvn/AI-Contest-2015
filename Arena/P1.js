@@ -536,16 +536,6 @@ function Board(myPosition, enemyPosition){
 			startcolor : findColor(enemyPlayerPosition)
 		}
 
-		if(colorcounts[currentPlayer].startcolor == RED)
-			colorcounts[currentPlayer].red = -1;
-		else
-			colorcounts[currentPlayer].black = -1;
-
-		if(colorcounts[enemyPlayer].startcolor == RED)
-			colorcounts[enemyPlayer].red = -1;
-		else
-			colorcounts[enemyPlayer].black = -1;
-
 		var is2PlayersConnected  = false;
 
 		while(queue.length > 0){
@@ -553,9 +543,6 @@ function Board(myPosition, enemyPosition){
 
 			x = position.x;
 			y = position.y;
-
-			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
-				continue;
 
 			if(findColor(position) == RED){
 				colorcounts[position.player].red++;
@@ -565,6 +552,9 @@ function Board(myPosition, enemyPosition){
 			}
 
 			cells_count[position.player]++;
+
+			if(tempBoard[x][y] == MYBLOCK_OBSTACLE)
+				continue;
 
 			newStepValue = position.stepvalue + position.player;
 
@@ -650,8 +640,7 @@ function Board(myPosition, enemyPosition){
 
 		var score = 0;
 
-		var cells_count = {};
-		cells_count[currentPlayer] = -1;
+		var cells_count = -1;
 
 		tempBoard[currentPlayerPosition.x][currentPlayerPosition.y] = currentPlayer;
 
@@ -668,24 +657,14 @@ function Board(myPosition, enemyPosition){
 		var x, y, x_new, y_new;
 		var blockValue, newStepValue;
 		var direction_command;
-		var possibleMoves_Scores = {};
-
-		possibleMoves_Scores[currentPlayer] = 0;
+		var possibleMoves_Score = 0;
 
 
-		var colorcounts = {};
-		colorcounts[currentPlayer] = {
+		var colorcounts = {
 			red: 0,
 			black: 0,
 			startcolor : findColor(currentPlayerPosition)
 		}
-
-
-		if(colorcounts[currentPlayer].startcolor == RED)
-			colorcounts[currentPlayer].red = -1;
-		else
-			colorcounts[currentPlayer].black = -1;
-
 
 		while(queue.length > 0){
 			position = queue.shift();
@@ -697,15 +676,15 @@ function Board(myPosition, enemyPosition){
 				continue;
 
 			if(findColor(position) == RED){
-				colorcounts[position.player].red++;
+				colorcounts.red++;
 			}
 			else {
-				colorcounts[position.player].black++;
+				colorcounts.black++;
 			}
 
-			cells_count[position.player]++;
+			cells_count++;
 
-			newStepValue = position.stepvalue + position.player;
+			newStepValue = position.stepvalue + currentPlayer;
 
 
 			for( var i = 0; i < directions.length; i++){
@@ -714,9 +693,7 @@ function Board(myPosition, enemyPosition){
 				x_new = x + direction_command.x;
 				y_new = y + direction_command.y;
 
-
-
-				if((x_new >= 0) && (x_new < self.width) && (y_new >= 0) && (y_new < self.height) && (tempBoard[x_new][y_new] != MYBLOCK_OBSTACLE)){
+				if((x_new >= 0) && (x_new < MAP_SIZE) && (y_new >= 0) && (y_new < MAP_SIZE) && (tempBoard[x_new][y_new] != MYBLOCK_OBSTACLE)){
 					/*There are two case we must check:
 					 1. blockValue = BLOCK_EMPTY => add to the queue
 					 2. blockValue = -(position.stepvalue + position.player) => assign tempBoard[x_new][y_new] = MYBLOCK_OBSTACLE
@@ -726,34 +703,26 @@ function Board(myPosition, enemyPosition){
 						queue.push({
 							x: x_new,
 							y: y_new,
-							player: position.player,
+							player: currentPlayer,
 							stepvalue: newStepValue
 						});
 						tempBoard[x_new][y_new] = newStepValue;
 					}
-					possibleMoves_Scores[position.player]++;
+					possibleMoves_Score++;
 				}
 			}
 
 		}//End while
 
 		//Now we have number of cells each player can own
-
-		var myColorCount = colorcounts[currentPlayer];
-		var myFillable = num_fillable(myColorCount);
+		var myFillable = num_fillable(colorcounts);
 
 		score += myFillable;
-
 		score *= BLOCKOWNED_SCORE;
-
-		possibleMoves_Scores[currentPlayer] -= (myColorCount.red + myColorCount.black) - myFillable;
-
-
-		score += possibleMoves_Scores[currentPlayer];
-
+		possibleMoves_Score -= (colorcounts.red + colorcounts.black) - myFillable;
+		score += possibleMoves_Score;
 
 		return score;
-
 	}
 
 	var checkEndGame = function (depth) {
@@ -780,7 +749,7 @@ function Board(myPosition, enemyPosition){
 
 		var endGameScore = self.evalBoard(depth);
 
-		if(depth == 0 || endGameScore >= WINNING_SCORE){
+		if(depth == 0 || (endGameScore && (endGameScore >= WINNING_SCORE))){
 			return endGameScore;
 		}
 
@@ -806,11 +775,11 @@ function Board(myPosition, enemyPosition){
 		var bestScore = -depth;
 		var score;
 
-		if(depth == 0){
+		var possibleMoves = self.findAllPossibleMoves();
+		if(depth == 0&&possibleMoves.length > 0){
 			return evalBoardDFS(depth);
 		}
 
-		var possibleMoves = self.findAllPossibleMoves();
 		for(var i = 0; i < possibleMoves.length && !self.isTimeOut; i++){
 
 			self.makeMove(possibleMoves[i], true);
@@ -827,6 +796,7 @@ function Board(myPosition, enemyPosition){
 
 			self.checkTimeOut();
 		}
+
 		return bestScore;
 	}
 
@@ -868,17 +838,17 @@ function Board(myPosition, enemyPosition){
 		var depth_increasement = isConnected?2:1;
 		var MAX_DEPTH = self.mySpace*depth_increasement;
 
+		var max_eval = 0;
 		for (var depth = depth_increasement; depth <= MAX_DEPTH && !self.isTimeOut ; depth+=depth_increasement) {
 			var bestScoreCurrentDepth = -WINNING_SCORE;
 			var bestMoveCurrentDepth;
 
 			evalutions = 0;
-			var max_eval = 0;
 
 			for (var i = 0; i < possibleMoves.length && !self.isTimeOut; i++) {
 				move = possibleMoves[i];
 				self.makeMove(move, !isConnected);
-				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth - 1, bestScoreCurrentDepth, beta);
+				score = isConnected?-negaMax(depth - 1, -beta, -bestScoreCurrentDepth):DFS(depth , bestScoreCurrentDepth, 0);
 				if(score > bestScoreCurrentDepth){
 					bestScoreCurrentDepth = score;
 					bestMoveCurrentDepth = move;
